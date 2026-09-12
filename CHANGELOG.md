@@ -1,5 +1,8 @@
 # Changelog
 
+## v0.1.2 — 2026-09-12
+- LICENSE + README embedded in both packages. No code changes.
+
 ## v0.1.1 — 2026-09-12
 - 5xx responses are not cached: the key is released so clients retry instead
   of replaying a stale 500.
