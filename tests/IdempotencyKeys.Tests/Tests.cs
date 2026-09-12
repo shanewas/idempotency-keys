@@ -135,6 +135,49 @@ public class FailureTests
     }
 }
 
+public class ServerErrorTests
+{
+    [Fact]
+    public async Task FiveHundred_NotCached_RetryReexecutes()
+    {
+        var store = new InMemoryIdempotencyStore();
+        var opt = new IdempotencyOptions();
+        int execs = 0;
+        RequestDelegate flaky = c =>
+        {
+            execs++;
+            c.Response.StatusCode = execs == 1 ? 500 : 200;
+            return c.Response.WriteAsync(execs == 1 ? "boom" : "recovered");
+        };
+        var mw = new IdempotencyKeysMiddleware(flaky, store, opt);
+        var c1 = Ctx.Fresh("k5");
+        await mw.InvokeAsync(c1);
+        Assert.Equal(500, c1.Response.StatusCode);
+        var c2 = Ctx.Fresh("k5");
+        await mw.InvokeAsync(c2);
+        Assert.Equal(2, execs);
+        Assert.Equal(200, c2.Response.StatusCode);
+    }
+
+    [Fact]
+    public async Task QueryString_ScopesSeparately_NoCrossTalk()
+    {
+        var store = new InMemoryIdempotencyStore();
+        var opt = new IdempotencyOptions();
+        int execs = 0;
+        RequestDelegate next = c => { execs++; c.Response.StatusCode = 200; return c.Response.WriteAsync("x"); };
+        var mw = new IdempotencyKeysMiddleware(next, store, opt);
+        var c1 = Ctx.Fresh("kq");
+        c1.Request.QueryString = new QueryString("?a=1");
+        await mw.InvokeAsync(c1);
+        var c2 = Ctx.Fresh("kq");
+        c2.Request.QueryString = new QueryString("?a=2");
+        await mw.InvokeAsync(c2);
+        Assert.Equal(200, c2.Response.StatusCode);
+        Assert.Equal(2, execs);
+    }
+}
+
 public class TtlTests
 {
     [Fact]

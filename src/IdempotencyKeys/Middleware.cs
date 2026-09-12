@@ -27,7 +27,8 @@ public sealed class IdempotencyKeysMiddleware
         await ctx.Request.Body.CopyToAsync(ms);
         var body = ms.ToArray();
         ctx.Request.Body.Position = 0;
-        var fp = Fingerprint.Compute(ctx.Request.Method, ctx.Request.Path.Value ?? "/", body);
+        var path = (ctx.Request.Path.Value ?? "/") + ctx.Request.QueryString;
+        var fp = Fingerprint.Compute(ctx.Request.Method, path, body);
         var scope = _opt.ScopeKey(ctx);
 
         var (inserted, rec) = await _store.TryInsertInFlightAsync(key, scope, fp);
@@ -56,9 +57,16 @@ public sealed class IdempotencyKeysMiddleware
                 throw;
             }
             var bytes = buf.ToArray();
-            var headers = new Dictionary<string, string>();
-            foreach (var h in ctx.Response.Headers) headers[h.Key] = h.Value.ToString();
-            await _store.CompleteAsync(key, scope, ctx.Response.StatusCode, headers, bytes);
+            if (ctx.Response.StatusCode >= 500)
+            {
+                await _store.RemoveAsync(key, scope);
+            }
+            else
+            {
+                var headers = new Dictionary<string, string>();
+                foreach (var h in ctx.Response.Headers) headers[h.Key] = h.Value.ToString();
+                await _store.CompleteAsync(key, scope, ctx.Response.StatusCode, headers, bytes);
+            }
             buf.Position = 0;
             await buf.CopyToAsync(origBody);
         }

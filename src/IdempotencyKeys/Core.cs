@@ -12,7 +12,7 @@ public sealed class IdempotencyOptions
     public Func<HttpContext, string> ScopeKey { get; set; } = DefaultScope;
     public static string DefaultScope(HttpContext ctx)
     {
-        var route = ctx.Request.Path.Value ?? "/";
+        var route = ctx.Request.Method + " " + (ctx.Request.Path.Value ?? "/") + ctx.Request.QueryString;
         var user = ctx.User?.Identity?.IsAuthenticated == true ? ctx.User.Identity.Name ?? "anon" : "anon";
         return route + "|" + user;
     }
