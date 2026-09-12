@@ -1,0 +1,17 @@
+name: publish
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - run: dotnet pack IdempotencyKeys.sln -c Release -o dist
+      - run: dotnet nuget push 'dist/*.nupkg' --source https://api.nuget.org/v3/index.json --skip-duplicate
