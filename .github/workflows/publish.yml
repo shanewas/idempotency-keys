@@ -14,4 +14,9 @@ jobs:
         with:
           dotnet-version: '9.0.x'
       - run: dotnet pack IdempotencyKeys.sln -c Release -o dist
-      - run: dotnet nuget push 'dist/*.nupkg' --source https://api.nuget.org/v3/index.json --skip-duplicate
+      - name: NuGet login (OIDC exchange)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ShanewasAhmed
+      - run: dotnet nuget push 'dist/*.nupkg' --api-key ${{steps.login.outputs.NUGET_API_KEY}} --source https://api.nuget.org/v3/index.json --skip-duplicate
