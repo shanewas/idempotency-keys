@@ -1,0 +1,10 @@
+# Changelog
+
+## v0.1.0 — 2026-09-12
+- `Idempotency-Key` middleware for POST/PATCH: 409 in-flight, verbatim replay
+  when complete, 422 on body mismatch, passthrough without header.
+- Postgres store (Npgsql): single-table schema, `ON CONFLICT` insert fence,
+  TTL purge. `IDEM_PG` connection string runs the live round-trip test.
+- In-memory store for tests and single-instance use.
+- Failed handlers release the key so clients can retry (no stuck 409s).
+- 8 xUnit tests green, including an 8-way parallel race test.
